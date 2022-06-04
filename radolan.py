@@ -2,17 +2,20 @@
 # Under construction....
 #
 import math
+import tarfile
+from urllib.request import urlopen
 class RadolanFile:
 
     header_length = 88
 
     @staticmethod
     def readHeader(stream):
-        headerBytes = bytearray(RadolanFile.header_length)
-        assert stream.readinto(headerBytes) == len(headerBytes), 'file too short'
+        headerBytes = stream.read(RadolanFile.header_length)
+        assert  len(headerBytes) == RadolanFile.header_length, 'file too short'
         # print(headerBytes)
         assert headerBytes[41:43] == b'PR', 'PR in header is missing -> wrong file format'
         assert headerBytes[55:57] == b'GP', 'GP in header is missing -> wrong file format'
+        assert headerBytes[66:68] == b'VV', 'VV in header is missing -> wrong file format'
         assert headerBytes[83:85] == b'MS', 'MS in header is missing -> wrong file format'
         msLen = int(headerBytes[85:88])
         assert msLen <= 999, 'MS string too long -> wrong file format'
@@ -34,11 +37,13 @@ class RadolanFile:
         # print(dimension)
         [size_y, size_x] = map(lambda val: int(val), dimension.split(b'x', 2))
         # print(size_x, size_y)
+        forecast = headerBytes[69:72]
         return {
             'product' : product.decode(),
             'timestamp' : timestamp,
             'precision' : precision,
-            'dimension' : { 'x': size_x, 'y': size_y}
+            'dimension' : { 'x': size_x, 'y': size_y},
+            'forecast' : forecast.decode()
         }
 
     @staticmethod
@@ -104,14 +109,42 @@ class RadolanMatrix:
         y = -er * m_phi * math.cos(phi_m) * math.cos(lam)
         return [x, y]
 
+class RadolanBzipFile:
+
+    @staticmethod
+    def getFileStreams(bzStream):
+        tf = tarfile.open(fileobj=bzStream, mode="r|bz2")
+        for tarInfo in tf:
+            if tarInfo.isfile():
+                # print("yeld", tarInfo.name)
+                yield [tarInfo.name, tf.extractfile(tarInfo) ]
+
+class RadolanProducts:
+
+    @staticmethod
+    def getLatestRvData():
+        bzStream = urlopen("https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2")
+        timestamp = ''
+        forecasts = []
+        for fileName, fileStream in RadolanBzipFile.getFileStreams(bzStream):
+            # print(fileName)
+            header = RadolanFile.readHeader(fileStream)
+            if not timestamp:
+                timestamp = header['timestamp']
+            # print(header)
+            dimension = str(header['dimension']['y']) + 'x' +  str(header['dimension']['x'])
+            # print(dimension)
+            [x, y] = RadolanMatrix.getMatrixCoord(dimension, 48.2169595278011, 11.257129774122909)
+            # print(x, y)
+            value = RadolanFile.readSingleValue(header, fileStream, x, y)
+            # print(value)
+            value = value * 12 # to get liter per hour 
+            value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
+            forecasts.append({'forecast' : header['forecast'], 'value' : value})
+            fileStream.close()
+        bzStream.close()
+        return { 'timestamp' : timestamp, 'forecasts' : forecasts }
 
 if __name__ == "__main__":
-    stream = open("DE1200_RV2206041735_120", "rb")
-    header = RadolanFile.readHeader(stream)
-    print(header)
-    dimension = str(header['dimension']['y']) + 'x' +  str(header['dimension']['x'])
-    print(dimension)
-    [x, y] = RadolanMatrix.getMatrixCoord(dimension, 48.2169595278011, 11.257129774122909)
-    print(x, y)
-    print(RadolanFile.readSingleValue(header, stream, x, y))
+    print(RadolanProducts.getLatestRvData())
 
