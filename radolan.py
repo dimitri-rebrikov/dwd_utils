@@ -134,7 +134,7 @@ class RadolanProducts:
     @staticmethod
     def getLatestWnData(lat, lon):
         def valueLambda(value):
-            value = value / 2 - 32.2 # to get the dBZ value as stated in the WN documentation
+            value = value / 2 - 32.5 # to get the dBZ value as stated in the WN documentation
             value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
@@ -169,5 +169,12 @@ if __name__ == "__main__":
     #
     # usage examples
     #
-    print(RadolanProducts.getLatestWnData(49.1696899797808, 10.324165597578734))
 
+    # get current WN (rain radar reflection) data
+    #print(RadolanProducts.getLatestWnData(47.55647132977289, 9.694714359108074))
+
+    # get current RV (rain amount) data
+    #print(RadolanProducts.getLatestRvData(47.55647132977289, 9.694714359108074))
+
+    # get data from specific DWD file
+    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV2206051255.tar.bz2', 47.55647132977289, 9.694714359108074))
