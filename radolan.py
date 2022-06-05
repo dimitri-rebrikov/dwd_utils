@@ -174,7 +174,7 @@ if __name__ == "__main__":
     #print(RadolanProducts.getLatestWnData(47.55647132977289, 9.694714359108074))
 
     # get current RV (rain amount) data
-    #print(RadolanProducts.getLatestRvData(47.55647132977289, 9.694714359108074))
+    print(RadolanProducts.getLatestRvData(47.55647132977289, 9.694714359108074))
 
     # get data from specific DWD file
     # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV2206051255.tar.bz2', 47.55647132977289, 9.694714359108074))
