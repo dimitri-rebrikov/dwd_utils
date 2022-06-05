@@ -124,7 +124,25 @@ class RadolanProducts:
 
     @staticmethod
     def getLatestRvData(lat, lon):
-        bzStream = urlopen("https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2")
+        def valueLambda(value):
+            value = value * 12 # to get liter per hour as stated in the RV documentation
+            value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
+            return value
+
+        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', lat, lon, valueLambda)
+
+    @staticmethod
+    def getLatestWnData(lat, lon):
+        def valueLambda(value):
+            value = value / 2 - 32.2 # to get the dBZ value as stated in the WN documentation
+            value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
+            return value
+
+        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/wn/WN_LATEST.tar.bz2', lat, lon, valueLambda)
+
+    @staticmethod
+    def getRadolanForecastData(bz2FileUrl, lat, lon, valueLambda=None):
+        bzStream = urlopen(bz2FileUrl)
         timestamp = ''
         forecasts = []
         for fileName, fileStream in RadolanBzipFile.getFileStreams(bzStream):
@@ -139,8 +157,9 @@ class RadolanProducts:
             # print(x, y)
             value = RadolanFile.readSingleValue(header, fileStream, x, y)
             # print(value)
-            value = value * 12 # to get liter per hour 
-            value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
+            if valueLambda != None:
+                value = valueLambda(value)
+            # print(value)
             forecasts.append({'forecast' : header['forecast'], 'value' : value})
             fileStream.close()
         bzStream.close()
@@ -150,5 +169,5 @@ if __name__ == "__main__":
     #
     # usage examples
     #
-    print(RadolanProducts.getLatestRvData(49.168089159811565, 10.153924630472927))
+    print(RadolanProducts.getLatestWnData(49.1696899797808, 10.324165597578734))
 
