@@ -60,8 +60,8 @@ class RadolanFile:
     def readSingleValue(header, stream, x, y):
         header_x = header['dimension']['x']
         header_y = header['dimension']['y']
-        assert x < header_x, "x shall be lesser than " + header_x
-        assert y < header_y, "y shall be lesser than " + header_y
+        assert x < header_x, "x shall be lesser than " + str(header_x)
+        assert y < header_y, "y shall be lesser than " + str(header_y)
         dataRow = bytearray(header_x * 2)
         for rowNr in range(y + 1):
             assert stream.readinto(dataRow) == len(dataRow), 'file too short'
@@ -75,25 +75,26 @@ class RadolanFile:
 class RadolanMatrix:
 
     matrix_definitions = {
-        '1200x1100': {'dy':600 , 'dx':470},
-        '900x900': {'dy':450 , 'dx':450},
+        (1200, 1100): {'dy':600 , 'dx':470},
+        (900, 900): {'dy':450 , 'dx':450},
     }
 
     @staticmethod
-    def getMatrixCoord(dimension, lat, lon):
-        matrix_definition = RadolanMatrix.matrix_definitions[dimension]
-        assert matrix_definition, 'unknown matrix dimension: ' + dimension
+    def getMatrixCoord(matrixDimensionYX, lat, lon):
+        matrix_definition = RadolanMatrix.matrix_definitions[matrixDimensionYX]
+        assert matrix_definition, 'unknown matrix dimension: ' + matrixDimensionYX
         #print(matrix_definition)
         [x_0, y_0] = RadolanMatrix.getRadolanCoord(51, 9)
         #print(x_0, y_0)
-        x_0 = x_0 - matrix_definition['dy']
-        y_0 = y_0 - matrix_definition['dx']
+        x_0 = x_0 - matrix_definition['dx']
+        y_0 = y_0 - matrix_definition['dy']
         #print(x_0, y_0)
         [x, y] = RadolanMatrix.getRadolanCoord(lat, lon)
         #print(x, y)
         x = x - x_0
         y = y - y_0
         #print(x, y)
+        assert x < matrixDimensionYX[1] and y < matrixDimensionYX[0], "provided lan/lot are outside of the matrix"
         return [math.ceil(x), math.ceil(y)]
 
     @staticmethod
@@ -122,7 +123,7 @@ class RadolanBzipFile:
 class RadolanProducts:
 
     @staticmethod
-    def getLatestRvData():
+    def getLatestRvData(lat, lon):
         bzStream = urlopen("https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2")
         timestamp = ''
         forecasts = []
@@ -132,9 +133,9 @@ class RadolanProducts:
             if not timestamp:
                 timestamp = header['timestamp']
             # print(header)
-            dimension = str(header['dimension']['y']) + 'x' +  str(header['dimension']['x'])
+            dimension = ( header['dimension']['y'] , header['dimension']['x'] )
             # print(dimension)
-            [x, y] = RadolanMatrix.getMatrixCoord(dimension, 48.2169595278011, 11.257129774122909)
+            [x, y] = RadolanMatrix.getMatrixCoord(dimension, lat, lon)
             # print(x, y)
             value = RadolanFile.readSingleValue(header, fileStream, x, y)
             # print(value)
@@ -146,5 +147,8 @@ class RadolanProducts:
         return { 'timestamp' : timestamp, 'forecasts' : forecasts }
 
 if __name__ == "__main__":
-    print(RadolanProducts.getLatestRvData())
+    #
+    # usage examples
+    #
+    print(RadolanProducts.getLatestRvData(49.168089159811565, 10.153924630472927))
 
