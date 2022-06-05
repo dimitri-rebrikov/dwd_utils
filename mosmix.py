@@ -5,6 +5,7 @@ from urllib.request import urlopen
 from io import BytesIO
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta, timezone
 
 class MosmixStation:
 
@@ -22,7 +23,7 @@ class MosmixStation:
         dy = 111.3 * (self.lat - lat)
         return math.sqrt(pow(dx,2)+pow(dy,2))
     
-    def getData(self, elementNameList=[]):
+    def getData(self, elementNameList=None, hourList=None):
         url = MosmixStation.urlPattern.replace('{id}', self.id)
         content = urlopen(url)
         zf = ZipFile(BytesIO(content.read()))
@@ -32,7 +33,7 @@ class MosmixStation:
         times = root.findall('./{*}Document/{*}ExtendedData/{*}ProductDefinition/{*}ForecastTimeSteps/{*}TimeStep')
         timesArr = []
         for time in times:
-            timesArr.append(time.text)
+            timesArr.append({'time':time.text, 'values':{}})
             # print(time.text)
 
         name = root.find('./{*}Document/{*}Placemark/{*}name').text
@@ -42,25 +43,41 @@ class MosmixStation:
         # print(description.text)
 
         forecasts = root.findall('./{*}Document/{*}Placemark/{*}ExtendedData/{*}Forecast')
-        forecastMap = {}
         for forecast in forecasts:
             forecastName = forecast.attrib['{https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd}elementName']
-            if len(elementNameList) == 0 or forecastName in elementNameList:
+            if elementNameList == None or forecastName in elementNameList:
                 # print(forecastName)
-                forecastValue = forecast.find('./{*}value')
-                forecastValues = re.split('\s+', forecastValue.text)
+                forecastString = forecast.find('./{*}value').text.strip()
+                # print('"'+forecastString+'"')
+                forecastValues = re.split('\s+', forecastString)
                 # print(forecastValues)
-                forecastMap[forecastName]=forecastValues
+                for i, forecastValue in enumerate(forecastValues):
+                    # print(forecastName, i, forecastValue)
+                    timesArr[i]['values'][forecastName]=forecastValue
+        
+        if hourList != None:
+            timesArr = MosmixStation.__filterHours(hourList, timesArr)
 
         coordinates = root.find('./{*}Document/{*}Placemark/{*}Point/{*}coordinates')
         #print(coordinates.text)
         lon, lat, elevation = coordinates.text.split(',')
         return {
             'stationData' : {'name':name, 'description':description, 'lat':lat, 'lon':lon, 'elevation':elevation},
-            'times' : timesArr,
-            'forecasts' :forecastMap
+            'forecasts' : timesArr,
         }
 
+    @staticmethod
+    def __filterHours(hourList, timesArr):
+        newArr = []
+        nowHour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        for hour in hourList:
+            def filterFunc(timeArrElem, desiredTime = nowHour + timedelta(hours=hour)):
+                time = datetime.strptime(timeArrElem['time'].replace('Z', 'UTC'), '%Y-%m-%dT%H:%M:%S.%f%Z').replace(tzinfo=timezone.utc).replace(minute=0, second=0, microsecond=0) 
+                # print(desiredTime, time)
+                return time == desiredTime
+            newArr.extend(filter(filterFunc, timesArr))
+        return newArr
+                     
 class StationList:
 
     station_list_url = "https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/mosmix_stationskatalog.cfg?view=nasPublication"
@@ -124,6 +141,7 @@ if __name__ == "__main__":
     print(vars(st['station']), st['distance'])
 
     # get the mosmix data for the station 
-    # for the possible data types see https://opendata.dwd.de/weather/lib/MetElementDefinition.xml
-    fc = st['station'].getData({'TTT', 'FF'})
+    # for the optional data types see https://opendata.dwd.de/weather/lib/MetElementDefinition.xml
+    # the optional hour range represent the hours in the future started from now which have to included
+    fc = st['station'].getData({'TTT', 'FF'}, range(3,9))
     print(fc)
