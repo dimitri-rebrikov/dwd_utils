@@ -1,4 +1,3 @@
-from asyncio.windows_events import NULL
 import re
 import math
 from urllib.request import urlopen
