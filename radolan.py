@@ -57,20 +57,26 @@ class RadolanFile:
         return pow(10, int(precision[1:4]))
 
     @staticmethod
-    def readSingleValue(header, stream, x, y):
+    def readValues(header, stream, xYTupleSet):
         header_x = header['dimension']['x']
         header_y = header['dimension']['y']
-        assert x < header_x, "x shall be lesser than " + str(header_x)
-        assert y < header_y, "y shall be lesser than " + str(header_y)
+        for x, y in xYTupleSet:
+            assert x < header_x, "x (" + str(x) + ") shall be lesser than " + str(header_x)
+            assert y < header_y, "y (" + str(y)  + ") shall be lesser than " + str(header_y)
         dataRow = bytearray(header_x * 2)
-        for rowNr in range(y + 1):
+        result = {}
+        for curY in range(header_y):
             assert stream.readinto(dataRow) == len(dataRow), 'file too short'
             # print(dataRow, '\n')
-        valBytes = dataRow[x * 2 : x * 2 + 2]
-        # print(valBytes)
-        if valBytes == b'\xc4\x29':
-            return -1
-        return float(int.from_bytes(valBytes, 'little')) * header['precision']
+            for curX in range(header_x):
+                if((curX, curY) in xYTupleSet):
+                    valBytes = dataRow[curX * 2 : curX * 2 + 2]
+                    # print(valBytes)
+                    if valBytes == b'\xc4\x29':
+                        value = -1
+                    value= float(int.from_bytes(valBytes, 'little')) * header['precision']
+                    result[(curX, curY)] = value
+        return result
 
 class RadolanMatrix:
 
@@ -123,25 +129,25 @@ class RadolanBzipFile:
 class RadolanProducts:
 
     @staticmethod
-    def getLatestRvData(lat, lon):
+    def getLatestRvData(latLonTupleSet):
         def valueLambda(value):
             value = value * 12 # to get liter per hour as stated in the RV documentation
             value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
-        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', lat, lon, valueLambda)
+        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', latLonTupleSet, valueLambda)
 
     @staticmethod
-    def getLatestWnData(lat, lon):
+    def getLatestWnData(latLonTupleSet):
         def valueLambda(value):
             value = value / 2 - 32.5 # to get the dBZ value as stated in the WN documentation
             value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
-        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/wn/WN_LATEST.tar.bz2', lat, lon, valueLambda)
+        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/wn/WN_LATEST.tar.bz2', latLonTupleSet, valueLambda)
 
     @staticmethod
-    def getRadolanForecastData(bz2FileUrl, lat, lon, valueLambda=None):
+    def getRadolanForecastData(bz2FileUrl, latLonTupleSet, valueLambda=None):
         bzStream = urlopen(bz2FileUrl)
         timestamp = ''
         forecasts = []
@@ -153,14 +159,22 @@ class RadolanProducts:
             # print(header)
             dimension = ( header['dimension']['y'] , header['dimension']['x'] )
             # print(dimension)
-            [x, y] = RadolanMatrix.getMatrixCoord(dimension, lat, lon)
-            # print(x, y)
-            value = RadolanFile.readSingleValue(header, fileStream, x, y)
-            # print(value)
-            if valueLambda != None:
-                value = valueLambda(value)
-            # print(value)
-            forecasts.append({'forecast' : header['forecast'], 'value' : value})
+            latLonToXYMap = {}
+            for lat, lon in latLonTupleSet:
+                x, y = RadolanMatrix.getMatrixCoord(dimension, lat, lon)
+                latLonToXYMap[(lat, lon)]=(x, y)
+                # print(x, y)
+            xyTupleSet = {v for k, v in latLonToXYMap.items()}
+            values = RadolanFile.readValues(header, fileStream, xyTupleSet)
+            # print(values)
+            result = {}
+            for latLon, xy in latLonToXYMap.items():
+                value = values[xy]
+                if valueLambda != None:
+                    value = valueLambda(value)
+                result[latLon] = value
+            # print(result)
+            forecasts.append({'forecast' : header['forecast'], 'values' : result})
             fileStream.close()
         bzStream.close()
         return { 'timestamp' : timestamp, 'forecasts' : forecasts }
@@ -171,10 +185,10 @@ if __name__ == "__main__":
     #
 
     # get current WN (rain radar reflection) data
-    #print(RadolanProducts.getLatestWnData(47.55647132977289, 9.694714359108074))
+    # print(RadolanProducts.getLatestWnData({(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
 
     # get current RV (rain amount) data
-    print(RadolanProducts.getLatestRvData(47.55647132977289, 9.694714359108074))
+    print(RadolanProducts.getLatestRvData({(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
 
     # get data from specific DWD file
-    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV2206051255.tar.bz2', 47.55647132977289, 9.694714359108074))
+    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV2206070730.tar.bz2', {(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
