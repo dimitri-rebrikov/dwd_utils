@@ -74,7 +74,8 @@ class RadolanFile:
                     # print(valBytes)
                     if valBytes == b'\xc4\x29':
                         value = -1
-                    value= float(int.from_bytes(valBytes, 'little')) * header['precision']
+                    else:
+                        value= float(int.from_bytes(valBytes, 'little')) * header['precision']
                     result[(curX, curY)] = value
         return result
 
@@ -132,8 +133,9 @@ class RadolanProducts:
     @staticmethod
     def getLatestRvData(latLonTupleSet):
         def valueLambda(value):
-            value = value * 12 # to get liter per hour as stated in the RV documentation
-            value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
+            if value > 0:
+                value = value * 12 # to get liter per hour as stated in the RV documentation
+                value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
         return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', latLonTupleSet, valueLambda)
@@ -189,7 +191,7 @@ if __name__ == "__main__":
     # print(RadolanProducts.getLatestWnData({(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
 
     # get current RV (rain amount) data
-    print(RadolanProducts.getLatestRvData({(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
+    print(RadolanProducts.getLatestRvData({(54.8126692443949, 9.47723542562195 )}))
 
     # get data from specific DWD file
     # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV2206070730.tar.bz2', {(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
