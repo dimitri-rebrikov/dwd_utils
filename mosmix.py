@@ -1,5 +1,5 @@
 import re
-import math
+from math import cos, sqrt
 from urllib.request import urlopen, urlretrieve
 from io import BytesIO
 from zipfile import ZipFile
@@ -17,9 +17,9 @@ class MosmixStation:
          self.elevation = elevation
 
     def distanceTo(self, lat, lon):
-        dx = 111.3 * math.cos((self.lat + lat) / 2 * 0.01745) * (self.lon - lon)
+        dx = 111.3 * cos((self.lat + lat) / 2 * 0.01745) * (self.lon - lon)
         dy = 111.3 * (self.lat - lat)
-        return math.sqrt(pow(dx,2)+pow(dy,2))
+        return sqrt((dx*dx)+(dy*dy))
     
 
 class StationList:
@@ -105,6 +105,7 @@ class MosmixData:
                         # print(elem.tag)
                         times = elem.findall('./{*}TimeStep')
                         #print(times)
+                        elem.clear()
                     elif elem.tag == ns_kml + "Placemark":
                         # print(elem.tag)
                         stationId = elem.find('./{*}name').text
@@ -112,6 +113,7 @@ class MosmixData:
                         if stationId in stationIdList:
                             stationsData[stationId] = MosmixData.__parsePlacemark(times, elem, elementNameList, hourList)
                             # print(stationsData[stationId])
+                        elem.clear()
                     root.clear()
             # print(stationsData)
             return stationsData
@@ -156,7 +158,8 @@ class MosmixData:
         nowHour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         for hour in hourList:
             def filterFunc(timeArrElem, desiredTime = nowHour + timedelta(hours=hour)):
-                time = datetime.strptime(timeArrElem['time'].replace('Z', 'UTC'), '%Y-%m-%dT%H:%M:%S.%f%Z').replace(tzinfo=timezone.utc).replace(minute=0, second=0, microsecond=0) 
+                dstr = timeArrElem['time']
+                time = datetime(int(dstr[:4]), int(dstr[5:7]), int(dstr[8:10]), int(dstr[11:13]), 0, 0, 0, timezone.utc)
                 # print(desiredTime, time)
                 return time == desiredTime
             newArr.extend(filter(filterFunc, timesArr))
