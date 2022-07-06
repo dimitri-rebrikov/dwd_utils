@@ -1,7 +1,7 @@
 #
 # Under construction....
 #
-import math
+from math import sin, cos, radians, ceil
 import tarfile
 from urllib.request import urlopen
 class RadolanFile:
@@ -101,19 +101,20 @@ class RadolanMatrix:
         y = y - y_0
         #print(x, y)
         assert x < matrixDimensionYX[1] and y < matrixDimensionYX[0], "provided lan/lot are outside of the matrix"
-        return [math.ceil(x), math.ceil(y)]
+        return [ceil(x), ceil(y)]
 
     @staticmethod
     def getRadolanCoord(lat, lon):
-        phi_0 = math.radians(60)
-        phi_m = math.radians(lat)
+        phi_0 = radians(60)
+        phi_m = radians(lat)
         lam_0 = 10
         lam_m = lon
-        lam = math.radians(lam_m - lam_0)
+        lam = radians(lam_m - lam_0)
         er = 6370.040
-        m_phi = (1 + math.sin(phi_0)) / (1 + math.sin(phi_m))
-        x = er * m_phi * math.cos(phi_m) * math.sin(lam)
-        y = -er * m_phi * math.cos(phi_m) * math.cos(lam)
+        m_phi = (1 + sin(phi_0)) / (1 + sin(phi_m))
+        cos_phi_m = cos(phi_m)
+        x = er * m_phi * cos_phi_m * sin(lam)
+        y = -er * m_phi * cos_phi_m * cos(lam)
         return [x, y]
 
 class RadolanBzipFile:
