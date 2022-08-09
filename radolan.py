@@ -4,6 +4,7 @@
 from math import sin, cos, radians, ceil
 import tarfile
 from urllib.request import urlopen
+from urllib.error import HTTPError
 class RadolanFile:
 
     header_length = 88
@@ -130,6 +131,16 @@ class RadolanBzipFile:
 
 class RadolanProducts:
 
+    @staticmethod 
+    def getCompositeBaseUrl():
+        newUrl = 'https://opendata.dwd.de/weather/radar/composite'
+        oldUrl = 'https://opendata.dwd.de/weather/radar/composit'
+        try:
+            urlopen(newUrl)
+            return newUrl
+        except HTTPError:
+            return oldUrl
+
     @staticmethod
     def getLatestRvData(latLonTupleSet):
         def valueLambda(value):
@@ -138,7 +149,7 @@ class RadolanProducts:
                 value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
-        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', latLonTupleSet, valueLambda)
+        return RadolanProducts.getRadolanForecastData(RadolanProducts.getCompositeBaseUrl()+'/rv/DE1200_RV_LATEST.tar.bz2', latLonTupleSet, valueLambda)
 
     @staticmethod
     def getLatestWnData(latLonTupleSet):
@@ -147,7 +158,7 @@ class RadolanProducts:
             value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
-        return RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/wn/WN_LATEST.tar.bz2', latLonTupleSet, valueLambda)
+        return RadolanProducts.getRadolanForecastData(RadolanProducts.getCompositeBaseUrl()+'/wn/WN_LATEST.tar.bz2', latLonTupleSet, valueLambda)
 
     @staticmethod
     def getRadolanForecastData(bz2FileUrl, latLonTupleSet, valueLambda=None):
