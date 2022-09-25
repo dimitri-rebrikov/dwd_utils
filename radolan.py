@@ -3,7 +3,7 @@
 #
 from math import sin, cos, radians, ceil
 import tarfile
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 class RadolanFile:
 
@@ -142,6 +142,14 @@ class RadolanProducts:
             return oldUrl
 
     @staticmethod
+    def __getLatestRvDataFileUrl():
+        return RadolanProducts.getCompositeBaseUrl()+'/rv/DE1200_RV_LATEST.tar.bz2'
+
+    @staticmethod
+    def getLatestRvDataTimestamp():
+        return RadolanProducts.getRadolanDataTimestamp(RadolanProducts.__getLatestRvDataFileUrl())
+
+    @staticmethod
     def getLatestRvData(latLonTupleSet):
         def valueLambda(value):
             if value > 0:
@@ -149,7 +157,7 @@ class RadolanProducts:
                 value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
 
-        return RadolanProducts.getRadolanForecastData(RadolanProducts.getCompositeBaseUrl()+'/rv/DE1200_RV_LATEST.tar.bz2', latLonTupleSet, valueLambda)
+        return RadolanProducts.getRadolanForecastData(RadolanProducts.__getLatestRvDataFileUrl(), latLonTupleSet, valueLambda)
 
     @staticmethod
     def getLatestWnData(latLonTupleSet):
@@ -193,6 +201,11 @@ class RadolanProducts:
         bzStream.close()
         return { 'timestamp' : timestamp, 'forecasts' : forecasts }
 
+    @staticmethod
+    def getRadolanDataTimestamp(fileUrl):
+        return urlopen(Request(url=fileUrl, method='HEAD')).getheader('last-modified')
+
+
 if __name__ == "__main__":
     #
     # usage examples
@@ -201,6 +214,8 @@ if __name__ == "__main__":
     # get current WN (rain radar reflection) data
     # print(RadolanProducts.getLatestWnData({(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
 
+    # get timestamp of the data
+    print(RadolanProducts.getLatestRvDataTimestamp())
     # get current RV (rain amount) data
     print(RadolanProducts.getLatestRvData({(54.8126692443949, 9.47723542562195 )}))
 
