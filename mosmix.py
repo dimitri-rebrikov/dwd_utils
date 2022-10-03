@@ -1,6 +1,6 @@
 import re
 from math import cos, sqrt
-from urllib.request import urlopen, urlretrieve
+from urllib.request import urlopen, urlretrieve, Request
 from io import BytesIO
 from zipfile import ZipFile
 import xml.etree.ElementTree as ET
@@ -10,11 +10,19 @@ import tempfile
 class MosmixData:
 
     @staticmethod
+    def __getMosmixFileUrl():
+        return "https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_S/all_stations/kml/MOSMIX_S_LATEST_240.kmz"
+
+    @staticmethod
+    def getMosmixDataTimestamp():
+        return urlopen(Request(url=MosmixData.__getMosmixFileUrl(), method='HEAD')).getheader('last-modified')    
+
+    @staticmethod
     def getStationsDataByIds(stationIdList, elementNameList=None, hourList=None):
         # print(stationIdList)
         with tempfile.NamedTemporaryFile(prefix="mosmix_", mode='rb', delete=False) as localKmzFile:
             # we need to store the kmz file locally as ZipFile needs random access to it
-            urlretrieve("https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_S/all_stations/kml/MOSMIX_S_LATEST_240.kmz", localKmzFile.name)
+            urlretrieve(MosmixData.__getMosmixFileUrl(), localKmzFile.name)
 
             zf = ZipFile(localKmzFile)
             file = zf.open(zf.namelist()[0])
@@ -101,6 +109,7 @@ if __name__ == "__main__":
     # get the mosmix data for coordinates
     # for the optional data types see https://opendata.dwd.de/weather/lib/MetElementDefinition.xml
     # the optional hour range represent the hours in the future to be included started from now
+    print(MosmixData.getMosmixDataTimestamp())
     from poi2MosmixMap import poi2MosmixMap
     data = MosmixData.getStationsDataByIds({poi2MosmixMap['70567'],poi2MosmixMap['10555']}, {'TTT', 'FF'}, range(3,9))
     print(data)
