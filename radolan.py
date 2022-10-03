@@ -79,46 +79,6 @@ class RadolanFile:
                         value= float(int.from_bytes(valBytes, 'little')) * header['precision']
                     result[(curX, curY)] = value
         return result
-
-class RadolanMatrix:
-
-    matrix_definitions = {
-        (1200, 1100): {'dy':600 , 'dx':470},
-        (900, 900): {'dy':450 , 'dx':450},
-    }
-
-    @staticmethod
-    def getMatrixCoord(matrixDimensionYX, lat, lon):
-        matrix_definition = RadolanMatrix.matrix_definitions[matrixDimensionYX]
-        assert matrix_definition, 'unknown matrix dimension: ' + matrixDimensionYX
-        #print(matrix_definition)
-        [x_0, y_0] = RadolanMatrix.getRadolanCoord(51, 9)
-        #print(x_0, y_0)
-        x_0 = x_0 - matrix_definition['dx']
-        y_0 = y_0 - matrix_definition['dy']
-        #print(x_0, y_0)
-        [x, y] = RadolanMatrix.getRadolanCoord(lat, lon)
-        #print(x, y)
-        x = x - x_0
-        y = y - y_0
-        #print(x, y)
-        assert x < matrixDimensionYX[1] and y < matrixDimensionYX[0], "provided lan/lot are outside of the matrix"
-        return [ceil(x), ceil(y)]
-
-    @staticmethod
-    def getRadolanCoord(lat, lon):
-        phi_0 = radians(60)
-        phi_m = radians(lat)
-        lam_0 = 10
-        lam_m = lon
-        lam = radians(lam_m - lam_0)
-        er = 6370.040
-        m_phi = (1 + sin(phi_0)) / (1 + sin(phi_m))
-        cos_phi_m = cos(phi_m)
-        x = er * m_phi * cos_phi_m * sin(lam)
-        y = -er * m_phi * cos_phi_m * cos(lam)
-        return [x, y]
-
 class RadolanBzipFile:
 
     @staticmethod
@@ -160,16 +120,7 @@ class RadolanProducts:
         return RadolanProducts.getRadolanForecastData(RadolanProducts.__getLatestRvDataFileUrl(), latLonTupleSet, valueLambda)
 
     @staticmethod
-    def getLatestWnData(latLonTupleSet):
-        def valueLambda(value):
-            value = value / 2 - 32.5 # to get the dBZ value as stated in the WN documentation
-            value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
-            return value
-
-        return RadolanProducts.getRadolanForecastData(RadolanProducts.getCompositeBaseUrl()+'/wn/WN_LATEST.tar.bz2', latLonTupleSet, valueLambda)
-
-    @staticmethod
-    def getRadolanForecastData(bz2FileUrl, latLonTupleSet, valueLambda=None):
+    def getRadolanForecastData(bz2FileUrl, xyTupleSet, valueLambda=None):
         bzStream = urlopen(bz2FileUrl)
         timestamp = ''
         forecasts = []
@@ -181,22 +132,9 @@ class RadolanProducts:
             # print(header)
             dimension = ( header['dimension']['y'] , header['dimension']['x'] )
             # print(dimension)
-            latLonToXYMap = {}
-            for lat, lon in latLonTupleSet:
-                x, y = RadolanMatrix.getMatrixCoord(dimension, lat, lon)
-                latLonToXYMap[(lat, lon)]=(x, y)
-                # print(x, y)
-            xyTupleSet = {v for k, v in latLonToXYMap.items()}
             values = RadolanFile.readValues(header, fileStream, xyTupleSet)
             # print(values)
-            result = {}
-            for latLon, xy in latLonToXYMap.items():
-                value = values[xy]
-                if valueLambda != None:
-                    value = valueLambda(value)
-                result[latLon] = value
-            # print(result)
-            forecasts.append({'forecast' : header['forecast'], 'values' : result})
+            forecasts.append({'forecast' : header['forecast'], 'values' : values})
             fileStream.close()
         bzStream.close()
         return { 'timestamp' : timestamp, 'forecasts' : forecasts }
@@ -211,13 +149,11 @@ if __name__ == "__main__":
     # usage examples
     #
 
-    # get current WN (rain radar reflection) data
-    # print(RadolanProducts.getLatestWnData({(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
-
     # get timestamp of the data
     print(RadolanProducts.getLatestRvDataTimestamp())
     # get current RV (rain amount) data
-    print(RadolanProducts.getLatestRvData({(54.8126692443949, 9.47723542562195 )}))
+    from poi2RadolanRvMap import poi2RadolanRvMap
+    print(RadolanProducts.getLatestRvData({poi2RadolanRvMap['70567']}))
 
     # get data from specific DWD file
-    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV2206070730.tar.bz2', {(48.78827242522538, 9.194220320956434),(48.15743009625175, 11.567928277345185)}))
+    print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606),(860, 714)}))
