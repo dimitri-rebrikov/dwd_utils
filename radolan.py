@@ -134,6 +134,11 @@ class RadolanProducts:
             # print(dimension)
             values = RadolanFile.readValues(header, fileStream, xyTupleSet)
             # print(values)
+            result = {}
+            if valueLambda != None:
+                for key in values:
+                    values[key] = valueLambda(values[key])
+                # print("after lambda", values)
             forecasts.append({'forecast' : header['forecast'], 'values' : values})
             fileStream.close()
         bzStream.close()
@@ -156,4 +161,4 @@ if __name__ == "__main__":
     print(RadolanProducts.getLatestRvData({poi2RadolanRvMap['70567']}))
 
     # get data from specific DWD file
-    print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606),(860, 714)}))
+    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606),(860, 714)}))
