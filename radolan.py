@@ -93,13 +93,7 @@ class RadolanProducts:
 
     @staticmethod 
     def getCompositeBaseUrl():
-        newUrl = 'https://opendata.dwd.de/weather/radar/composite'
-        oldUrl = 'https://opendata.dwd.de/weather/radar/composit'
-        try:
-            urlopen(newUrl)
-            return newUrl
-        except HTTPError:
-            return oldUrl
+        return 'https://opendata.dwd.de/weather/radar/composite'
 
     @staticmethod
     def __getLatestRvDataFileUrl():
