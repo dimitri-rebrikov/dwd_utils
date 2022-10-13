@@ -7,18 +7,18 @@ from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 class RadolanFile:
 
-    header_length = 88
+    header_length = 91
 
     @staticmethod
     def readHeader(stream):
         headerBytes = stream.read(RadolanFile.header_length)
         assert  len(headerBytes) == RadolanFile.header_length, 'file too short'
-        # print(headerBytes)
-        assert headerBytes[41:43] == b'PR', 'PR in header is missing -> wrong file format'
-        assert headerBytes[55:57] == b'GP', 'GP in header is missing -> wrong file format'
-        assert headerBytes[66:68] == b'VV', 'VV in header is missing -> wrong file format'
-        assert headerBytes[83:85] == b'MS', 'MS in header is missing -> wrong file format'
-        msLen = int(headerBytes[85:88])
+        #print(headerBytes)
+        assert headerBytes[44:46] == b'PR', 'PR in header is missing -> wrong file format'
+        assert headerBytes[58:60] == b'GP', 'GP in header is missing -> wrong file format'
+        assert headerBytes[69:71] == b'VV', 'VV in header is missing -> wrong file format'
+        assert headerBytes[86:88] == b'MS', 'MS in header is missing -> wrong file format'
+        msLen = int(headerBytes[88:91])
         assert msLen <= 999, 'MS string too long -> wrong file format'
         stream.read(msLen) # ignore the MS data
         assert stream.read(1) == b'\x03' ,'\\x03 at the end of header is missing -> wrong file format'
@@ -30,15 +30,15 @@ class RadolanFile:
         # print(MMYY)
         timestamp = RadolanFile.__convertToTimestamp(DDhhmm.decode(), MMYY.decode())
         # print(timestamp)
-        precisionStr = headerBytes[44:48]
+        precisionStr = headerBytes[47:51]
         # print(precisionStr)
         precision = RadolanFile.__decodePrecision(precisionStr.decode())
         # print(precision)
-        dimension = headerBytes[57:66]
+        dimension = headerBytes[60:69]
         # print(dimension)
         [size_y, size_x] = map(lambda val: int(val), dimension.split(b'x', 2))
         # print(size_x, size_y)
-        forecast = headerBytes[69:72]
+        forecast = headerBytes[72:75]
         return {
             'product' : product.decode(),
             'timestamp' : timestamp,

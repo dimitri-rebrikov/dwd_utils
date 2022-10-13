@@ -1,5 +1,5 @@
 from poi2LatLonMap import poi2LatLonMap
-from radolan_rv_coord_proj_kugel import getRadolanRvCoord
+from radolan_rv_coord_proj_wgs84 import getRadolanRvCoord
 from pickle import dump
 
 poi2RadolanRvMap={}
