@@ -25,7 +25,7 @@ class MosmixStation:
 class StationList:
 
     station_list_url = "https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/mosmix_stationskatalog.cfg?view=nasPublication"
-    station_pattern = re.compile("^[0-9\-]{5}")
+    station_pattern = re.compile("^[0-9]{4,5}")
 
     def __init__(self):
         self.stations = StationList.__getStations()
@@ -41,10 +41,10 @@ class StationList:
     @staticmethod
     def __convert_to_station(row):
         return MosmixStation(
-            id = row[12:17].strip(),
-            name = row[23:43].strip(),
-            lat = StationList.__convert_minutes(row[44:50]),
-            lon = StationList.__convert_minutes(row[51:58])
+            id = row[0:5].strip(),
+            name = row[11:31].strip(),
+            lat = StationList.__convert_minutes(row[32:38]),
+            lon = StationList.__convert_minutes(row[39:46])
         )
 
     @staticmethod
