@@ -1,6 +1,3 @@
-#
-# Under construction....
-#
 from math import sin, cos, radians, ceil
 import tarfile
 from urllib.request import urlopen, Request
@@ -104,14 +101,17 @@ class RadolanProducts:
         return RadolanProducts.getRadolanDataTimestamp(RadolanProducts.__getLatestRvDataFileUrl())
 
     @staticmethod
-    def getLatestRvData(latLonTupleSet):
+    def getLatestRvData(xyTupleSet):
+        return RadolanProducts.getRvData(RadolanProducts.__getLatestRvDataFileUrl(), xyTupleSet)
+
+    @staticmethod
+    def getRvData(bz2RvFileUrl, xyTupleSet):
         def valueLambda(value):
             if value > 0:
                 value = value * 12 # to get liter per hour as stated in the RV documentation
                 value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
-
-        return RadolanProducts.getRadolanForecastData(RadolanProducts.__getLatestRvDataFileUrl(), latLonTupleSet, valueLambda)
+        return RadolanProducts.getRadolanForecastData(bz2RvFileUrl, xyTupleSet, valueLambda)
 
     @staticmethod
     def getRadolanForecastData(bz2FileUrl, xyTupleSet, valueLambda=None):
