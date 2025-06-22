@@ -41,14 +41,14 @@ class RadolanFile:
             'timestamp' : timestamp,
             'precision' : precision,
             'dimension' : { 'x': size_x, 'y': size_y},
-            'forecast' : forecast.decode()
+            'forecast' : int(forecast.decode())
         }
 
     @staticmethod
     def __convertToTimestamp(DDhhmm, MMYY):
         # '2022-06-13T12:00:00.000Z
         return '20' + MMYY[2:4]+ '-' + MMYY[0:2] + '-' + DDhhmm[0:2] + 'T' +\
-            DDhhmm[2:4] + ':' + DDhhmm[4:6] + ':00.000Z'
+            DDhhmm[2:4] + ':' + DDhhmm[4:6] + ':00Z'
 
     @staticmethod
     def __decodePrecision(precision):

@@ -28,7 +28,7 @@ class RadolanHdf5File:
                 'offset' : h5['dataset1']['data1']['what'].attrs['offset'],
                 'xsize' : h5['where'].attrs['xsize'], 
                 'ysize' : h5['where'].attrs['ysize'],
-                'forecast' : (endtime - timestamp).total_seconds() / 60.0
+                'forecast' : int((endtime - timestamp).total_seconds() / 60.0)
             }
         
     @staticmethod
@@ -49,7 +49,7 @@ class RadolanHdf5File:
                     if value == info['nodata']:
                         value = -1
                     else:
-                        value= value * info['gain'] + info['offset']
+                        value = round(value * info['gain'] + info['offset'], 2)
                     # print(value)
                     callback((x, y), value)
                     x = x + 1
@@ -94,7 +94,7 @@ class RadolanHdf5Products:
                 timestamp = info['timestamp']
             nonlocal curInfo, values
             if curInfo != None:
-                forecasts.append({'forecast' : '{:03.0f}'.format(curInfo['forecast']), 'values' : values})
+                forecasts.append({'forecast' : curInfo['forecast'], 'values' : values})
             curInfo = info
             values = {} 
         def valuesCallback(xyTuple, value):
