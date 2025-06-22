@@ -3,8 +3,10 @@ from poi2RadolanHdf5RvMap import poi2RadolanHdf5RvMap
 from radolan import RadolanProducts
 from poi2RadolanRvMap import poi2RadolanRvMap
 plz='15378'
-data = RadolanProducts.getRvData('file:./testdata/DE1200_RV2506151820.tar.bz2',{poi2RadolanRvMap[plz]})
-data_hdf5 = RadolanHdf5Products.getRvData('file:./testdata/composite_rv_20250615_1820.tar',{poi2RadolanHdf5RvMap[plz]})
+xy = poi2RadolanRvMap[plz]
+data = RadolanProducts.getRvData('file:./testdata/DE1200_RV2506151820.tar.bz2',{(xy[0], xy[1], xy[0], xy[1])})
+xy = poi2RadolanHdf5RvMap[plz]
+data_hdf5 = RadolanHdf5Products.getRvData('file:./testdata/composite_rv_20250615_1820.tar',{(xy[0], xy[1], xy[0], xy[1])})
 
 print(data['timestamp'])
 print(data_hdf5['timestamp'],"\n")

@@ -32,21 +32,28 @@ class RadolanHdf5File:
             }
         
     @staticmethod
-    def readValues(info, dataSet, xYTupleSet):
-        for x, y in xYTupleSet:
-            assert x < info['xsize'], "x (" + str(x) + ") shall be lesser than " + str(info['xsize'])
-            assert y < info['ysize'], "y (" + str(y)  + ") shall be lesser than " + str(info['ysize'])
+    def readValues(info, dataSet, xyxyTupleSet, callback):
+        for x0, y0, x1, y1 in xyxyTupleSet:
+            assert x0 < info['xsize'], "x0 (" + str(x1) + ") shall be lesser than " + str(info['xsize'])
+            assert y0 < info['ysize'], "y0 (" + str(y1)  + ") shall be lesser than " + str(info['ysize'])
+            assert x1 < info['xsize'], "x1 (" + str(x1) + ") shall be lesser than " + str(info['xsize'])
+            assert y1 < info['ysize'], "y1 (" + str(y1)  + ") shall be lesser than " + str(info['ysize'])
         result = {}
-        for xYTuple in xYTupleSet:
-            value = dataSet[xYTuple[1], xYTuple[0]]
-            # print(value)
-            if value == info['nodata']:
-                value = -1
-            else:
-                value= value * info['gain'] + info['offset']
-            # print(value)
-            result[(xYTuple[0], xYTuple[1])] = value.item()
-        return result
+        for xyxyTuple in xyxyTupleSet:
+            y = xyxyTuple[1]
+            for row in dataSet[xyxyTuple[1]:xyxyTuple[3]+1]:
+                x = xyxyTuple[0]
+                for value in row[xyxyTuple[0]:xyxyTuple[2]+1]:
+                    value = value.item()
+                    # print(value)
+                    if value == info['nodata']:
+                        value = -1
+                    else:
+                        value= value * info['gain'] + info['offset']
+                    # print(value)
+                    callback((x, y), value)
+                    x = x + 1
+                y = y + 1 
 
 class RadolanHdf5Products:
 
@@ -76,7 +83,28 @@ class RadolanHdf5Products:
         return RadolanHdf5Products.getRadolanForecastData(h5TarFileUrl, xyTupleSet, valueLambda)
     
     @staticmethod
-    def getRadolanForecastData(h5TarFileUrl, xyTupleSet, valueLambda=None):
+    def getRadolanForecastData(h5TarFileUrl, xyxyTupleSet, valueLambda=None):
+        timestamp = None
+        curInfo = None
+        forecasts = []
+        values = None
+        def nextFileCallback(info):
+            nonlocal timestamp
+            if info != None:
+                timestamp = info['timestamp']
+            nonlocal curInfo, values
+            if curInfo != None:
+                forecasts.append({'forecast' : '{:03.0f}'.format(curInfo['forecast']), 'values' : values})
+            curInfo = info
+            values = {} 
+        def valuesCallback(xyTuple, value):
+            nonlocal values
+            values[xyTuple] = value
+        RadolanHdf5Products.parseRadolanForecastData(h5TarFileUrl, xyxyTupleSet, nextFileCallback, valuesCallback, valueLambda)
+        return { 'timestamp' : RadolanHdf5Products.__convertToString(timestamp), 'forecasts' : forecasts }
+    
+    @staticmethod
+    def parseRadolanForecastData(h5TarFileUrl, xyxyTupleSet, nextFileCallback, valuesCallback, valueLambda=None):
         tarStream = urlopen(h5TarFileUrl)
         timestamp = ''
         forecasts = []
@@ -86,20 +114,16 @@ class RadolanHdf5Products:
             h5mem = io.BytesIO(tf.extractfile(fileInfo).read())
             h5 = h5py.File(h5mem, 'r')
             info = RadolanHdf5File.readInfo(h5)
-            if not timestamp:
-                timestamp = info['timestamp']
-            # print(header)
-            values = RadolanHdf5File.readValues(info, h5['dataset1']['data1']['data'], xyTupleSet)
-            # print(values)
-            result = {}
-            if valueLambda != None:
-                for key in values:
-                    values[key] = valueLambda(values[key])
-                # print("after lambda", values)
-            forecasts.append({'forecast' : '{:03.0f}'.format(info['forecast']), 'values' : values})
+            nextFileCallback(info)
+            def intValuesCallback(xyTuple, value):
+                nonlocal valueLambda, valuesCallback
+                if valueLambda != None:
+                    value = valueLambda(value)
+                valuesCallback(xyTuple, value)
+            RadolanHdf5File.readValues(info, h5['dataset1']['data1']['data'], xyxyTupleSet, intValuesCallback)
             h5.close()
         tarStream.close()
-        return { 'timestamp' : RadolanHdf5Products.__convertToString(timestamp), 'forecasts' : forecasts }
+        nextFileCallback(None)
 
     @staticmethod
     def getRadolanDataTimestamp(fileUrl):
@@ -119,7 +143,9 @@ if __name__ == "__main__":
     print(RadolanHdf5Products.getLatestRvDataTimestamp())
     # get current RV (rain amount) data
     from poi2RadolanHdf5RvMap import poi2RadolanHdf5RvMap
-    print(RadolanHdf5Products.getLatestRvData({poi2RadolanRvMap['70567']}))
+    xy = poi2RadolanHdf5RvMap['70567']
+    xyxy = (xy[0],xy[1],xy[0],xy[1])
+    print(RadolanHdf5Products.getLatestRvData({xyxy}))
 
     # get data from specific DWD file
-    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606),(860, 714)}))
+    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606, 882, 606),(860, 714, 860, 714)}))
