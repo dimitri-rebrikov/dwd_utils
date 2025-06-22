@@ -55,27 +55,29 @@ class RadolanFile:
         return pow(10, int(precision[1:4]))
 
     @staticmethod
-    def readValues(header, stream, xYTupleSet):
+    def readValues(header, stream, xyxyTupleSet, callback):
         header_x = header['dimension']['x']
         header_y = header['dimension']['y']
-        for x, y in xYTupleSet:
-            assert x < header_x, "x (" + str(x) + ") shall be lesser than " + str(header_x)
-            assert y < header_y, "y (" + str(y)  + ") shall be lesser than " + str(header_y)
+        for x0, y0, x1, y1 in xyxyTupleSet:
+            assert x0 < header_x, "x0 (" + str(x0) + ") shall be lesser than " + str(header_x)
+            assert y0 < header_y, "y0 (" + str(y0)  + ") shall be lesser than " + str(header_y)
+            assert x1 < header_x, "x1 (" + str(x1) + ") shall be lesser than " + str(header_x)
+            assert y1 < header_y, "y1 (" + str(y1)  + ") shall be lesser than " + str(header_y)
         dataRow = bytearray(header_x * 2)
-        result = {}
         for curY in range(header_y):
             assert stream.readinto(dataRow) == len(dataRow), 'file too short'
             # print(dataRow, '\n')
             for curX in range(header_x):
-                if((curX, curY) in xYTupleSet):
-                    valBytes = dataRow[curX * 2 : curX * 2 + 2]
-                    # print(valBytes)
-                    if valBytes == b'\xc4\x29':
-                        value = -1
-                    else:
-                        value= float(int.from_bytes(valBytes, 'little')) * header['precision']
-                    result[(curX, curY)] = value
-        return result
+                for x0, y0, x1, y1 in xyxyTupleSet:
+                    if curX >= x0 and curY >= y0 and curX <= x1 and curY <= y1:
+                        valBytes = dataRow[curX * 2 : curX * 2 + 2]
+                        # print(valBytes)
+                        if valBytes == b'\xc4\x29':
+                            value = -1
+                        else:
+                            value= float(int.from_bytes(valBytes, 'little')) * header['precision']
+                        callback((curX, curY), value)
+
 class RadolanBzipFile:
 
     @staticmethod
@@ -101,43 +103,57 @@ class RadolanProducts:
         return RadolanProducts.getRadolanDataTimestamp(RadolanProducts.__getLatestRvDataFileUrl())
 
     @staticmethod
-    def getLatestRvData(xyTupleSet):
-        return RadolanProducts.getRvData(RadolanProducts.__getLatestRvDataFileUrl(), xyTupleSet)
+    def getLatestRvData(xyxyTupleSet):
+        return RadolanProducts.getRvData(RadolanProducts.__getLatestRvDataFileUrl(), xyxyTupleSet)
 
     @staticmethod
-    def getRvData(bz2RvFileUrl, xyTupleSet):
+    def getRvData(bz2RvFileUrl, xyxyTupleSet):
         def valueLambda(value):
             if value > 0:
                 value = value * 12 # to get liter per hour as stated in the RV documentation
                 value = float("{:.2f}".format(value)) # shorten to 2 decimal numbers
             return value
-        return RadolanProducts.getRadolanForecastData(bz2RvFileUrl, xyTupleSet, valueLambda)
+        return RadolanProducts.getRadolanForecastData(bz2RvFileUrl, xyxyTupleSet, valueLambda)
 
     @staticmethod
-    def getRadolanForecastData(bz2FileUrl, xyTupleSet, valueLambda=None):
-        bzStream = urlopen(bz2FileUrl)
-        timestamp = ''
+    def getRadolanForecastData(bz2FileUrl, xyxyTupleSet, valueLambda=None):
+        timestamp = None
+        curHeader = None
         forecasts = []
+        values = None
+        def nextFileCallback(header):
+            nonlocal timestamp
+            if header != None:
+                timestamp = header['timestamp']
+            nonlocal curHeader, values
+            if curHeader != None:
+                forecasts.append({'forecast' : curHeader['forecast'], 'values' : values})
+            curHeader = header
+            values = {} 
+        def valuesCallback(xyTuple, value):
+            nonlocal values
+            values[xyTuple] = value
+        RadolanProducts.parseRadolanForecastData(bz2FileUrl, xyxyTupleSet, nextFileCallback, valuesCallback, valueLambda)
+        return { 'timestamp' : timestamp, 'forecasts' : forecasts }
+
+    @staticmethod
+    def parseRadolanForecastData(bz2FileUrl, xyxyTupleSet, nextFileCallback, valuesCallback, valueLambda=None):
+        bzStream = urlopen(bz2FileUrl)
         for fileName, fileStream in RadolanBzipFile.getFileStreams(bzStream):
             # print(fileName)
             header = RadolanFile.readHeader(fileStream)
-            if not timestamp:
-                timestamp = header['timestamp']
             # print(header)
-            dimension = ( header['dimension']['y'] , header['dimension']['x'] )
-            # print(dimension)
-            values = RadolanFile.readValues(header, fileStream, xyTupleSet)
-            # print(values)
-            result = {}
-            if valueLambda != None:
-                for key in values:
-                    values[key] = valueLambda(values[key])
-                # print("after lambda", values)
-            forecasts.append({'forecast' : header['forecast'], 'values' : values})
+            nextFileCallback(header)
+            def intValuesCallback(xyTuple, value):
+                nonlocal valueLambda, valuesCallback
+                if valueLambda != None:
+                    value = valueLambda(value)
+                valuesCallback(xyTuple, value)
+            RadolanFile.readValues(header, fileStream, xyxyTupleSet, intValuesCallback)
             fileStream.close()
         bzStream.close()
-        return { 'timestamp' : timestamp, 'forecasts' : forecasts }
-
+        nextFileCallback(None)
+        
     @staticmethod
     def getRadolanDataTimestamp(fileUrl):
         return urlopen(Request(url=fileUrl, method='HEAD')).getheader('last-modified')
@@ -152,7 +168,9 @@ if __name__ == "__main__":
     print(RadolanProducts.getLatestRvDataTimestamp())
     # get current RV (rain amount) data
     from poi2RadolanRvMap import poi2RadolanRvMap
-    print(RadolanProducts.getLatestRvData({poi2RadolanRvMap['70567']}))
+    xy = poi2RadolanRvMap['70567']
+    xyxy = (xy[0],xy[1],xy[0],xy[1])
+    print(RadolanProducts.getLatestRvData({xyxy}))
 
     # get data from specific DWD file
-    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606),(860, 714)}))
+    # print(RadolanProducts.getRadolanForecastData('https://opendata.dwd.de/weather/radar/composit/rv/DE1200_RV_LATEST.tar.bz2', {(882, 606, 882, 606),(860, 714, 860, 714)}))

@@ -1,5 +1,7 @@
 from radolan import RadolanProducts
 from poi2RadolanRvMap import poi2RadolanRvMap
-data = RadolanProducts.getRvData('file:./testdata/DE1200_RV2506151820.tar.bz2',{poi2RadolanRvMap['70597']})
+xy = poi2RadolanRvMap['70597']
+xyxy = (xy[0], xy[1], xy[0], xy[1])
+data = RadolanProducts.getRvData('file:./testdata/DE1200_RV2506151820.tar.bz2',{xyxy})
 print(data)
 assert data == {'timestamp': '2025-06-15T18:20:00.000Z', 'forecasts': [{'forecast': '000', 'values': {(478, 335): 5.28}}, {'forecast': '005', 'values': {(478, 335): 3.6}}, {'forecast': '010', 'values': {(478, 335): 3.96}}, {'forecast': '015', 'values': {(478, 335): 4.92}}, {'forecast': '020', 'values': {(478, 335): 4.8}}, {'forecast': '025', 'values': {(478, 335): 8.64}}, {'forecast': '030', 'values': {(478, 335): 6.72}}, {'forecast': '035', 'values': {(478, 335): 4.68}}, {'forecast': '040', 'values': {(478, 335): 1.8}}, {'forecast': '045', 'values': {(478, 335): 1.8}}, {'forecast': '050', 'values': {(478, 335): 1.68}}, {'forecast': '055', 'values': {(478, 335): 2.88}}, {'forecast': '060', 'values': {(478, 335): 4.56}}, {'forecast': '065', 'values': {(478, 335): 6.48}}, {'forecast': '070', 'values': {(478, 335): 6.0}}, {'forecast': '075', 'values': {(478, 335): 7.32}}, {'forecast': '080', 'values': {(478, 335): 5.76}}, {'forecast': '085', 'values': {(478, 335): 5.28}}, {'forecast': '090', 'values': {(478, 335): 4.08}}, {'forecast': '095', 'values': {(478, 335): 4.32}}, {'forecast': '100', 'values': {(478, 335): 4.56}}, {'forecast': '105', 'values': {(478, 335): 3.24}}, {'forecast': '110', 'values': {(478, 335): 3.0}}, {'forecast': '115', 'values': {(478, 335): 2.16}}, {'forecast': '120', 'values': {(478, 335): 1.32}}]}
