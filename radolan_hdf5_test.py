@@ -1,0 +1,7 @@
+from radolan_hdf5 import RadolanHdf5Products
+from poi2RadolanHdf5RvMap import poi2RadolanHdf5RvMap
+xy = poi2RadolanHdf5RvMap['70597']
+xyxy = (xy[0], xy[1], xy[0], xy[1])
+data = RadolanHdf5Products.getRvData('file:./testdata/composite_rv_20250615_1820.tar',{xyxy})
+print(data)
+assert data == {'timestamp': '2025-06-15T18:20:00Z', 'forecasts': [{'forecast': 0, 'values': {(478, 865): 4.92}}, {'forecast': 5, 'values': {(478, 865): 3.84}}, {'forecast': 10, 'values': {(478, 865): 3.72}}, {'forecast': 15, 'values': {(478, 865): 4.68}}, {'forecast': 20, 'values': {(478, 865): 5.16}}, {'forecast': 25, 'values': {(478, 865): 9.24}}, {'forecast': 30, 'values': {(478, 865): 7.44}}, {'forecast': 35, 'values': {(478, 865): 3.84}}, {'forecast': 40, 'values': {(478, 865): 1.08}}, {'forecast': 45, 'values': {(478, 865): 2.76}}, {'forecast': 50, 'values': {(478, 865): 1.2}}, {'forecast': 55, 'values': {(478, 865): 2.76}}, {'forecast': 60, 'values': {(478, 865): 3.96}}, {'forecast': 65, 'values': {(478, 865): 5.76}}, {'forecast': 70, 'values': {(478, 865): 4.2}}, {'forecast': 75, 'values': {(478, 865): 6.6}}, {'forecast': 80, 'values': {(478, 865): 4.92}}, {'forecast': 85, 'values': {(478, 865): 4.68}}, {'forecast': 90, 'values': {(478, 865): 4.56}}, {'forecast': 95, 'values': {(478, 865): 5.52}}, {'forecast': 100, 'values': {(478, 865): 3.36}}, {'forecast': 105, 'values': {(478, 865): 3.48}}, {'forecast': 110, 'values': {(478, 865): 2.4}}, {'forecast': 115, 'values': {(478, 865): 1.68}}, {'forecast': 120, 'values': {(478, 865): 1.08}}]}
