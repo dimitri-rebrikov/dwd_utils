@@ -41,9 +41,9 @@ class RadolanHdf5File:
         result = {}
         for xyxyTuple in xyxyTupleSet:
             y = xyxyTuple[1]
-            for row in dataSet[xyxyTuple[1]:xyxyTuple[3]+1]:
+            for row in dataSet[xyxyTuple[1]:xyxyTuple[3]+1, xyxyTuple[0]:xyxyTuple[2]+1]:
                 x = xyxyTuple[0]
-                for value in row[xyxyTuple[0]:xyxyTuple[2]+1]:
+                for value in row:
                     value = value.item()
                     # print(value)
                     if value == info['nodata']:

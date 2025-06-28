@@ -12,8 +12,12 @@ from pyproj import Transformer
 transformer=Transformer.from_proj("EPSG:4326", "+proj=stere +lat_0=90 +lat_ts=60 +lon_0=10 +a=6378137 +b=6356752.3142451802 +no_defs +x_0=543696.83521776402 +y_0=3622088.8619310018")
 
 def getRadolanRvCoord(lat, lon):
+    (x, y)=getRadolanRvCoordFloat(lat, lon)
+    return((int(round(x, 0)), int(round(y, 0))))
+
+def getRadolanRvCoordFloat(lat, lon):
     (x, y)=transformer.transform(lat, lon)
-    return((int(round(x/1000, 0)), int(round(y/1000+1200, 0))))
+    return(x/1000, y/1000 + 1200)
 
 if __name__ == "__main__":
     coords = [
@@ -24,5 +28,8 @@ if __name__ == "__main__":
     ]
     for coord in coords:
         print(coord)
+        (x, y)=getRadolanRvCoordFloat(*coord)
+        print(x, y)
         (x, y)=getRadolanRvCoord(*coord)
         print(x, y)
+        print()

@@ -11,8 +11,15 @@ def nextFileCallback(header):
         image = Image.new('RGB', size, '#fff')
         px = image.load()
         for xy in values.keys():
-            value = 255 - int(round(values[xy]/maxValue * 255,0))
-            px[xy[0], size[1]-1-xy[1]] = (value, value, value)
+            value = values[xy]
+            if value == -1:
+                color = (0, 0, 0)
+            elif value == 0:
+                color = (255, 255, 255)
+            else: 
+                value = 125 - int(round(value/maxValue * 125,0))
+                color = (value, value, value)
+            px[xy[0], size[1]-1-xy[1]] = color
         image.save(curHeader['product'] + str(curHeader['forecast']) + '.jpeg')
         image.close()
     curHeader = header
