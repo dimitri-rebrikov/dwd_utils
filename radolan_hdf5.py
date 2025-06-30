@@ -38,12 +38,11 @@ class RadolanHdf5File:
             assert y0 < info['ysize'], "y0 (" + str(y1)  + ") shall be lesser than " + str(info['ysize'])
             assert x1 < info['xsize'], "x1 (" + str(x1) + ") shall be lesser than " + str(info['xsize'])
             assert y1 < info['ysize'], "y1 (" + str(y1)  + ") shall be lesser than " + str(info['ysize'])
-        result = {}
+        data = dataSet[()]
         for xyxyTuple in xyxyTupleSet:
-            y = xyxyTuple[1]
-            for row in dataSet[xyxyTuple[1]:xyxyTuple[3]+1, xyxyTuple[0]:xyxyTuple[2]+1]:
-                x = xyxyTuple[0]
-                for value in row:
+            for y in range(xyxyTuple[1], xyxyTuple[3]+1):
+                for x in range(xyxyTuple[0], xyxyTuple[2]+1):
+                    value = data[y, x]
                     value = value.item()
                     # print(value)
                     if value == info['nodata']:
@@ -53,7 +52,7 @@ class RadolanHdf5File:
                     # print(value)
                     callback((x, y), value)
                     x = x + 1
-                y = y + 1 
+                    y = y + 1 
 
 class RadolanHdf5Products:
 
