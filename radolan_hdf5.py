@@ -20,8 +20,12 @@ class RadolanHdf5File:
                                                             h5['dataset1']['what'].attrs['endtime'].decode())
         timestamp = RadolanHdf5File.__convertToTime(h5['what'].attrs['date'].decode(),
                                                             h5['what'].attrs['time'].decode())
+        try:
+            product = h5['how']['POLARA'].attrs['pattern'].decode()
+        except KeyError:
+            product = 'unknown'
         return {
-                'product' : h5['how']['POLARA'].attrs['pattern'].decode(),
+                'product' : product,
                 'timestamp' : timestamp,
                 'gain' : h5['dataset1']['data1']['what'].attrs['gain'],
                 'nodata' : h5['dataset1']['data1']['what'].attrs['nodata'],
